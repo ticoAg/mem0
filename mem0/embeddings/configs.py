@@ -2,13 +2,15 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from mem0.embeddings.base import EmbeddingModelConfig
+
 
 class EmbedderConfig(BaseModel):
     provider: str = Field(
         description="Provider of the embedding model (e.g., 'ollama', 'openai')",
         default="openai",
     )
-    config: Optional[dict] = Field(
+    config: EmbeddingModelConfig = Field(
         description="Configuration for the specific embedding model", default=None
     )
 
@@ -19,4 +21,3 @@ class EmbedderConfig(BaseModel):
             return v
         else:
             raise ValueError(f"Unsupported embedding provider: {provider}")
-        

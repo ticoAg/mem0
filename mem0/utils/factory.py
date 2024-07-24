@@ -17,6 +17,7 @@ class LlmFactory:
         "together": "mem0.llms.together.TogetherLLM",
         "aws_bedrock": "mem0.llms.aws_bedrock.AWSBedrockLLM",
         "litellm": "mem0.llms.litellm.LiteLLM",
+        "openai-like": "mem0.llms.openai_like.OpenAILikeLLM"
     }
 
     @classmethod
@@ -40,7 +41,7 @@ class EmbedderFactory:
     def create(cls, provider_name, config):
         class_type = cls.provider_to_class.get(provider_name)
         if class_type:
-            embedder_instance = load_class(class_type)(**config)
+            embedder_instance = load_class(class_type)(config)
             return embedder_instance
         else:
             raise ValueError(f"Unsupported Embedder provider: {provider_name}")

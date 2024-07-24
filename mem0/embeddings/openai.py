@@ -1,13 +1,13 @@
 from openai import OpenAI
 
-from mem0.embeddings.base import EmbeddingBase
+from mem0.embeddings.base import EmbeddingBase, EmbeddingModelConfig
 
 
 class OpenAIEmbedding(EmbeddingBase):
-    def __init__(self, model="text-embedding-3-small"):
+    def __init__(self, config: EmbeddingModelConfig):
         self.client = OpenAI()
-        self.model = model
-        self.dims = 1536
+        self.model = config.model
+        self.dims = config.dims
 
     def embed(self, text):
         """

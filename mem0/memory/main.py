@@ -7,22 +7,23 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field, ValidationError
 
+from mem0.configs.prompts import MEMORY_DEDUCTION_PROMPT
+from mem0.embeddings.configs import EmbedderConfig
+from mem0.llms.base import LLMBase
+from mem0.llms.configs import LlmConfig
 from mem0.llms.utils.tools import (
     ADD_MEMORY_TOOL,
     DELETE_MEMORY_TOOL,
     UPDATE_MEMORY_TOOL,
 )
-from mem0.configs.prompts import MEMORY_DEDUCTION_PROMPT
 from mem0.memory.base import MemoryBase
 from mem0.memory.setup import mem0_dir, setup_config
 from mem0.memory.storage import SQLiteManager
 from mem0.memory.telemetry import capture_event
 from mem0.memory.utils import get_update_memory_messages
+from mem0.utils.factory import EmbedderFactory, LlmFactory
 from mem0.vector_stores.configs import VectorStoreConfig
-from mem0.llms.configs import LlmConfig
-from mem0.embeddings.configs import EmbedderConfig
 from mem0.vector_stores.qdrant import Qdrant
-from mem0.utils.factory import LlmFactory, EmbedderFactory
 
 # Setup user config
 setup_config()
@@ -58,15 +59,14 @@ class MemoryConfig(BaseModel):
         default=os.path.join(mem0_dir, "history.db"),
     )
     collection_name: str = Field(default="mem0", description="Name of the collection")
-    embedding_model_dims: int = Field(
-        default=1536, description="Dimensions of the embedding model"
-    )
 
 
 class Memory(MemoryBase):
     def __init__(self, config: MemoryConfig = MemoryConfig()):
         self.config = config
-        self.embedding_model = EmbedderFactory.create(self.config.embedder.provider, config)
+        self.embedding_model = EmbedderFactory.create(
+            self.config.embedder.provider, self.config.embedder.config
+        )
         # Initialize the appropriate vector store based on the configuration
         vector_store_config = self.config.vector_store.config
         if self.config.vector_store.provider == "qdrant":
@@ -82,15 +82,18 @@ class Memory(MemoryBase):
                 f"Unsupported vector store type: {self.config.vector_store_type}"
             )
 
-        self.llm = LlmFactory.create(self.config.llm.provider, self.config.llm.config)
+        self.llm: LLMBase = LlmFactory.create(
+            self.config.llm.provider, self.config.llm.config
+        )
         self.db = SQLiteManager(self.config.history_db_path)
         self.collection_name = self.config.collection_name
         self.vector_store.create_col(
             name=self.collection_name, vector_size=self.embedding_model.dims
         )
-        self.vector_store.create_col(
-            name=self.collection_name, vector_size=self.embedding_model.dims
-        )
+        # ?? why double
+        # self.vector_store.create_col(
+        #     name=self.collection_name, vector_size=self.embedding_model.dims
+        # )
         capture_event("mem0.init", self)
 
     @classmethod
@@ -129,6 +132,7 @@ class Memory(MemoryBase):
         if metadata is None:
             metadata = {}
         embeddings = self.embedding_model.embed(data)
+        assert len(embeddings) == self.embedding_model.dims, "Invalid embedding size."
 
         filters = filters or {}
         if user_id:
