@@ -37,10 +37,10 @@ class EmbedderFactory:
     }
 
     @classmethod
-    def create(cls, provider_name):
+    def create(cls, provider_name, config):
         class_type = cls.provider_to_class.get(provider_name)
         if class_type:
-            embedder_instance = load_class(class_type)()
+            embedder_instance = load_class(class_type)(**config)
             return embedder_instance
         else:
             raise ValueError(f"Unsupported Embedder provider: {provider_name}")

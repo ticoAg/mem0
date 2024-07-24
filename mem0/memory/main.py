@@ -66,7 +66,7 @@ class MemoryConfig(BaseModel):
 class Memory(MemoryBase):
     def __init__(self, config: MemoryConfig = MemoryConfig()):
         self.config = config
-        self.embedding_model = EmbedderFactory.create(self.config.embedder.provider)
+        self.embedding_model = EmbedderFactory.create(self.config.embedder.provider, config)
         # Initialize the appropriate vector store based on the configuration
         vector_store_config = self.config.vector_store.config
         if self.config.vector_store.provider == "qdrant":
